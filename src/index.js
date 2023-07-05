@@ -107,7 +107,14 @@ function commitWork(fiber) {
     {
         return
     }
+
+    let domParentFiber = fiber.parent
+    while (!domParentFiber.dom) {
+        domParentFiber = domParentFiber.parent 
+    }
+
     const domParent = fiber.parent.dom
+
     if (fiber.effectTag === "PLACEMENT" &&
         fiber.dom != null)
     {
@@ -115,7 +122,7 @@ function commitWork(fiber) {
     } 
     else if (fiber.effectTag === "DELETION") 
     {
-        domParent.removeChild(fiber.dom)
+        commitDeletion(fiber, domParent)
     }
     else if (fiber.effectTag === "UPDATE")
     {
@@ -128,6 +135,17 @@ function commitWork(fiber) {
     domParent.appendChild(fiber.dom)
     commitWork(fiber.child)
     commitWork(fiber.sibling)
+}
+
+function commitDeletion(fiber, domParent) {
+    if (fiber.dom) 
+    {
+        domParent.removeChild(fiber.dom)
+    }
+    else
+    {
+        commitDeletion(fiber.child, domParent)
+    }
 }
 
 function render(element, container) {
@@ -167,6 +185,17 @@ function workLoop(deadline) {
 requestIdleCallback(workLoop)
 
 function performUnitOfWork(fiber) {
+    const isFunctionComponent = 
+        fiber.type instanceof Function
+
+    if (isFunctionComponent) {
+        updateFunctionComponent(fiber)
+    } 
+    else 
+    {
+        updateHostComponent(fiber)
+    }
+
     if (!fiber.dom) 
     {
         fiber.dom = createDom(fiber)
@@ -178,8 +207,33 @@ function performUnitOfWork(fiber) {
     if (fiber.parent) 
     {
         fiber.parent.dom.appendChild(fiber.dom)
-    }
+    }  
     
+    if (fiber.child) {
+        return fiber.child
+    }
+    let nextFiber = fiber
+    while (nextFiber) {
+        if (nextFiber.sibling) 
+        {
+            return nextFiber.sibling
+        }
+        nextFiber = nextFiber.parent
+    } 
+}
+
+function updateHostComponent(fiber) {
+    const children = [fiber.type(fiber.props)]
+    reconcileChildren(fiber, children)
+}
+
+function updateHostComponent(fiber) {
+    if (!fiber.dom) {
+        fiber.dom = createDom(fiber)
+    }
+    reconcileChildren(fiber, fiber.props.children)
+}
+
 function reconcileChildren(wipFiber, elements) {
 
     let index = 0
@@ -246,20 +300,6 @@ function reconcileChildren(wipFiber, elements) {
     }
 
 }
-    
-    
-    if (fiber.child) {
-        return fiber.child
-    }
-    let nextFiber = fiber
-    while (nextFiber) {
-        if (nextFiber.sibling) 
-        {
-            return nextFiber.sibling
-        }
-        nextFiber = nextFiber.parent
-    } 
-}
 
 const Didact = {
     createElement,
@@ -267,12 +307,19 @@ const Didact = {
 }
 
 /** @jsx Didact.createElement */
-const element = Didact.createElement(
-    "div",
-    { id: "foo"},
-    Didact.createElement("a", null, "bar"),
-    Didact.createElement("b")
-)
+
+function App(props) {
+    return <h1>Hi {props.name}</h1>
+}
+
+const element = <App name="foo" />
+
+// const element = Didact.createElement(
+//     "div",
+//     { id: "foo"},
+//     Didact.createElement("a", null, "bar"),
+//     Didact.createElement("b")
+// )
 
 const container = document.getElementById("root")
 Didact.render(element, container)
