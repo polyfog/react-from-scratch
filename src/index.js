@@ -350,7 +350,6 @@ const Didact = {
 }
 
 /** @jsx Didact.createElement */
-
 function Counter() {
     const [state, setState] = Didact.useState(1)
     return (
@@ -361,19 +360,6 @@ function Counter() {
 }
 
 const element = <Counter />
-
-// function App(props) {
-//     return <h1>Hi {props.name}</h1>
-// }
-
-// const element = <App name="foo" />
-
-// const element = Didact.createElement(
-//     "div",
-//     { id: "foo"},
-//     Didact.createElement("a", null, "bar"),
-//     Didact.createElement("b")
-// )
 
 const container = document.getElementById("root")
 Didact.render(element, container)
